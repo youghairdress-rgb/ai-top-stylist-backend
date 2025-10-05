@@ -2,6 +2,6 @@ flask
 flask-cors
 opencv-python-headless
 mediapipe==0.10.14
-google-generativeai==0.5.2
 gunicorn
 numpy
+requests
