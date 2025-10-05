@@ -65,8 +65,8 @@ def call_llm_for_proposals_rest(diagnosis_data):
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # Use the modern and fast gemini-1.5-flash model
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GOOGLE_API_KEY}"
+    # *** FINAL FIX: Use the standard 'gemini-pro' model which is stable for direct REST API calls. ***
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_API_KEY}"
 
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -166,7 +166,6 @@ def diagnose():
 def generate_style():
     # This endpoint remains the same, no changes needed here.
     print("\n--- Received request for /generate_style ---")
-    # ... (rest of the function is unchanged)
     if 'front_image' not in request.files or 'style_description' not in request.form:
         return jsonify({"error": "Missing image or style description"}), 400
     try:
