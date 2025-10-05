@@ -76,7 +76,7 @@ def call_llm_for_proposals(diagnosis_data):
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # Using the standard model name with the latest library version
+    # Using the standard model name with a pinned, stable library version
     model = genai.GenerativeModel('gemini-pro')
 
     # Constructing the prompt from diagnosis data
