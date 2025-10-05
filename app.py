@@ -65,8 +65,8 @@ def call_llm_for_proposals_rest(diagnosis_data):
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # *** FINAL FIX: Use the standard 'gemini-pro' model which is stable for direct REST API calls. ***
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_API_KEY}"
+    # *** Trying the specific model version as suggested ***
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key={GOOGLE_API_KEY}"
 
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
