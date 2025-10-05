@@ -1,7 +1,0 @@
-flask
-flask-cors
-opencv-python-headless
-mediapipe
-google-generativeai
-gunicorn
-numpy
