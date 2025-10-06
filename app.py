@@ -59,14 +59,14 @@ def analyze_personal_color(image_bytes):
 def call_llm_for_proposals_rest(diagnosis_data):
     """
     Generates proposals by calling the Gemini REST API directly.
-    This bypasses the google-generativeai library to avoid compatibility issues.
     """
     print("Calling LLM via REST API...")
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # *** Trying the specific model version as suggested ***
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-001:generateContent?key={GOOGLE_API_KEY}"
+    # *** FINAL VERSION: Using the latest and most powerful model available through this API. ***
+    # This is the last and best option to try.
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={GOOGLE_API_KEY}"
 
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -96,7 +96,14 @@ def call_llm_for_proposals_rest(diagnosis_data):
     payload = {
         "contents": [{
             "parts": [{"text": prompt}]
-        }]
+        }],
+        # Added generationConfig for safety, though defaults should work.
+        "generationConfig": {
+            "temperature": 0.7,
+            "topK": 40,
+            "topP": 0.95,
+            "maxOutputTokens": 1024,
+        }
     }
 
     headers = {"Content-Type": "application/json"}
@@ -107,10 +114,12 @@ def call_llm_for_proposals_rest(diagnosis_data):
         
         response_json = response.json()
         
-        # Navigate the response structure to get the text
+        # More robust navigation of the response structure
+        if not response_json.get('candidates'):
+            raise ValueError("No candidates found in the LLM response.")
+        
         text_content = response_json['candidates'][0]['content']['parts'][0]['text']
         
-        # Clean up the response text to ensure it's valid JSON
         json_text = text_content.strip().replace("```json", "").replace("```", "")
         print("LLM REST API response received successfully.")
         return json_text
@@ -123,7 +132,6 @@ def call_llm_for_proposals_rest(diagnosis_data):
         raise
 
 # --- API Endpoints ---
-
 @app.route('/diagnose', methods=['POST'])
 def diagnose():
     print("\n--- Received request for /diagnose ---")
@@ -164,7 +172,6 @@ def diagnose():
 
 @app.route('/generate_style', methods=['POST'])
 def generate_style():
-    # This endpoint remains the same, no changes needed here.
     print("\n--- Received request for /generate_style ---")
     if 'front_image' not in request.files or 'style_description' not in request.form:
         return jsonify({"error": "Missing image or style description"}), 400
