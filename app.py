@@ -66,20 +66,13 @@ def analyze_personal_color(image_bytes):
 def call_llm_for_proposals_rest(diagnosis_data):
     """
     Generates proposals by calling the Gemini REST API directly.
-    This function will now attempt to connect to multiple known models to find a working one.
     """
-    print("Calling LLM via REST API (Multi-model debug mode)...")
+    print("Calling LLM via REST API...")
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # List of models to try in order of preference.
-    models_to_try = [
-        "gemini-1.5-pro-latest",
-        "gemini-pro",
-        "gemini-1.0-pro",
-    ]
-
-    api_base_url = "https://generativelanguage.googleapis.com/v1beta/models/"
+    # Using the standard 'gemini-pro' model, as it's the most stable choice.
+    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_API_KEY}"
 
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -108,44 +101,27 @@ def call_llm_for_proposals_rest(diagnosis_data):
     
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
     headers = {"Content-Type": "application/json"}
-    last_error = None
 
-    for model_name in models_to_try:
-        api_url = f"{api_base_url}{model_name}:generateContent?key={GOOGLE_API_KEY}"
-        print(f"--- ATTEMPTING to call model: {model_name} ---")
-        try:
-            response = requests.post(api_url, headers=headers, json=payload)
-            print(f"--> RESPONSE Status Code for {model_name}: {response.status_code}")
-            
-            if response.status_code == 200:
-                print(f"*** SUCCESS! Connected with model: {model_name} ***")
-                response_json = response.json()
-                
-                if not response_json.get('candidates'):
-                    raise ValueError("No candidates found in the LLM response.")
-                
-                text_content = response_json['candidates'][0]['content']['parts'][0]['text']
-                json_text = text_content.strip().replace("```json", "").replace("```", "")
-                print("LLM REST API response received successfully.")
-                return json_text # Return the successful result
-            else:
-                print(f"--> FAILED to connect with {model_name}. Response Body: {response.text}")
-                last_error = requests.exceptions.RequestException(
-                    f"Model {model_name} failed with status {response.status_code}", response=response
-                )
-                # Continue to the next model
-        except requests.exceptions.RequestException as e:
-            print(f"--> EXCEPTION occurred while calling {model_name}: {e}")
-            last_error = e
-            # Continue to the next model
+    try:
+        response = requests.post(api_url, headers=headers, json=payload)
+        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+        
+        response_json = response.json()
+        
+        if not response_json.get('candidates'):
+            raise ValueError("No candidates found in the LLM response.")
+        
+        text_content = response_json['candidates'][0]['content']['parts'][0]['text']
+        json_text = text_content.strip().replace("```json", "").replace("```", "")
+        print("LLM REST API response received successfully.")
+        return json_text
 
-    # If the loop completes without a successful call
-    print("--- ALL LLM MODELS FAILED TO RESPOND ---")
-    if last_error:
-        raise last_error # Raise the last recorded error
-    else:
-        raise Exception("Unknown error occurred while trying all LLM models.")
-
+    except requests.exceptions.RequestException as e:
+        print(f"CRITICAL ERROR during LLM REST API call: {e}")
+        print(f"Response Status Code: {e.response.status_code if e.response else 'N/A'}")
+        print(f"Response Body: {e.response.text if e.response else 'N/A'}")
+        traceback.print_exc()
+        raise
 
 # --- API Endpoints ---
 @app.route('/diagnose', methods=['POST'])
@@ -159,7 +135,6 @@ def diagnose():
         
         filestr = front_image_file.read()
         npimg = np.frombuffer(filestr, np.uint8)
-        # Use cv2 consistently
         image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
         
         max_width = 800
@@ -190,6 +165,7 @@ def diagnose():
 @app.route('/generate_style', methods=['POST'])
 def generate_style():
     print("\n--- Received request for /generate_style ---")
+    # ... (rest of the function is unchanged)
     if 'front_image' not in request.files or 'style_description' not in request.form:
         return jsonify({"error": "Missing image or style description"}), 400
     try:
@@ -213,6 +189,7 @@ def generate_style():
         print(f"An error occurred during style generation: {e}")
         traceback.print_exc()
         return jsonify({"error": "Failed to generate image"}), 500
+
 
 # --- Main Execution ---
 if __name__ == '__main__':
