@@ -4,4 +4,4 @@ opencv-python-headless
 mediapipe==0.10.14
 gunicorn
 numpy
-google-generativeai>=0.5.2
+google-generativeai==0.5.4
