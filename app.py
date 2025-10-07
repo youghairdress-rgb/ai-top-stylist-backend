@@ -1,20 +1,17 @@
 import os
 import cv2
 import numpy as np
-import google.generativeai as genai # Re-introducing the official Google SDK
+import google.generativeai as genai
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import io
 import traceback
 import json
-import uuid
-from concurrent.futures import ThreadPoolExecutor
 
 # --- Configuration ---
 # Set the Google API key from environment variables
 try:
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
-    # Configure the SDK with the API key
     if GOOGLE_API_KEY:
         genai.configure(api_key=GOOGLE_API_KEY)
 except Exception as e:
@@ -25,55 +22,38 @@ except Exception as e:
 app = Flask(__name__)
 CORS(app)
 
-# In-memory storage for task status and results.
-tasks = {}
-executor = ThreadPoolExecutor(max_workers=5)
-
 # --- Health Check Endpoint ---
 @app.route('/', methods=['GET'])
 def health_check():
     """A simple endpoint to confirm the server is running."""
     return "Hello, Stylist AI is running!", 200
 
-# --- AI and Image Processing Functions (to be run in background) ---
+# --- AI and Image Processing Functions ---
 
-def run_full_diagnosis(task_id, image_bytes):
-    """The main function that performs all heavy lifting."""
-    try:
-        print(f"[Task {task_id}] Starting full diagnosis in background.")
-        tasks[task_id]['status'] = 'analyzing_assets'
-        
-        # Dummy analysis functions
-        face_skeleton_results = analyze_face_and_skeleton(image_bytes)
-        personal_color_results = analyze_personal_color(image_bytes)
-        full_diagnosis = {**face_skeleton_results, **personal_color_results}
-        
-        tasks[task_id]['status'] = 'calling_llm'
-        
-        # Call LLM for proposals using the SDK
-        proposals_json_str = call_llm_with_sdk(full_diagnosis)
-        proposals_data = json.loads(proposals_json_str)
-
-        final_result = {"diagnosis": full_diagnosis, "proposals": proposals_data}
-        tasks[task_id]['result'] = final_result
-        tasks[task_id]['status'] = 'complete'
-        print(f"[Task {task_id}] Diagnosis complete and result stored.")
-
-    except Exception as e:
-        print(f"[Task {task_id}] CRITICAL ERROR in background thread: {e}")
-        traceback.print_exc()
-        tasks[task_id]['status'] = 'error'
-        tasks[task_id]['error'] = str(e)
+def analyze_assets(front_image_bytes):
+    """
+    Analyzes all assets. In the future, this can be expanded.
+    For now, it's a wrapper for dummy analysis functions.
+    """
+    print("Starting asset analysis...")
+    # Dummy analysis functions
+    face_skeleton_results = analyze_face_and_skeleton(front_image_bytes)
+    personal_color_results = analyze_personal_color(front_image_bytes)
+    full_diagnosis = {**face_skeleton_results, **personal_color_results}
+    print("Asset analysis complete.")
+    return full_diagnosis
 
 def analyze_face_and_skeleton(image_bytes):
-    print("Starting face and skeleton analysis...")
+    print("-> Analyzing face and skeleton...")
+    # This is a placeholder for actual Mediapipe logic
     return {
         "face_diagnosis": {"鼻": "丸みのある鼻", "口": "ふっくらした唇", "目": "丸い", "眉": "平行眉", "おでこ": "広め"},
         "skeleton_diagnosis": {"首の長さ": "普通", "顔の形": "丸顔", "ボディライン": "ストレート", "肩のライン": "なだらか"}
     }
 
 def analyze_personal_color(image_bytes):
-    print("Starting personal color analysis...")
+    print("-> Analyzing personal color...")
+    # This is a placeholder for actual color analysis logic
     return {
         "personal_color_diagnosis": {"明度": "高", "ベースカラー": "イエローベース", "シーズン": "スプリング", "彩度": "中", "瞳の色": "ライトブラウン"}
     }
@@ -86,9 +66,8 @@ def call_llm_with_sdk(diagnosis_data):
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # Initialize the model using the SDK, upgraded to gemini-1.5-pro
-    # SDK will handle using the correct API version (v1) for this model.
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    # Using the stable 'gemini-pro' model with the official SDK
+    model = genai.GenerativeModel('gemini-pro')
     
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -105,7 +84,6 @@ def call_llm_with_sdk(diagnosis_data):
     
     try:
         response = model.generate_content(prompt)
-        # Extracting the JSON part from the response text
         json_text = response.text.strip().replace("```json", "").replace("```", "")
         print("LLM SDK response received successfully.")
         return json_text
@@ -117,44 +95,47 @@ def call_llm_with_sdk(diagnosis_data):
 # --- API Endpoints ---
 @app.route('/diagnose', methods=['POST'])
 def diagnose():
-    print("\n--- Received request to start diagnosis ---")
+    print("\n--- Received request for /diagnose ---")
     if 'front_image' not in request.files:
         return jsonify({"error": "No front image provided"}), 400
 
-    filestr = request.files['front_image'].read()
-    task_id = str(uuid.uuid4())
-    tasks[task_id] = {'status': 'pending'}
-    
-    print(f"Created new task with ID: {task_id}")
-    executor.submit(run_full_diagnosis, task_id, filestr)
-    
-    return jsonify({"status": "pending", "task_id": task_id}), 202
+    try:
+        front_image_file = request.files['front_image']
+        
+        filestr = front_image_file.read()
+        npimg = np.frombuffer(filestr, np.uint8)
+        image = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
+        
+        # Resize image to prevent server overload
+        max_width = 800
+        if image.shape[1] > max_width:
+            print(f"Image is large ({image.shape[1]}px width), resizing to {max_width}px.")
+            scale = max_width / image.shape[1]
+            new_height = int(image.shape[0] * scale)
+            image = cv2.resize(image, (max_width, new_height), interpolation=cv2.INTER_AREA)
+        
+        _, image_bytes_for_analysis = cv2.imencode('.jpg', image)
+        
+        # Perform all analyses
+        full_diagnosis = analyze_assets(image_bytes_for_analysis.tobytes())
+        
+        # Call LLM for proposals
+        proposals_json_str = call_llm_with_sdk(full_diagnosis)
+        proposals_data = json.loads(proposals_json_str)
 
-@app.route('/get_result', methods=['GET'])
-def get_result():
-    task_id = request.args.get('task_id')
-    if not task_id or task_id not in tasks:
-        return jsonify({"error": "Invalid or missing task_id"}), 404
-    
-    task = tasks.get(task_id, {})
-    status = task.get('status', 'not_found')
-    
-    print(f"Polling for task {task_id}, current status: {status}")
+        final_result = {"diagnosis": full_diagnosis, "proposals": proposals_data}
+        
+        print("Diagnosis process completed successfully.")
+        return jsonify(final_result)
 
-    if status == 'complete':
-        result = task.get('result')
-        tasks.pop(task_id, None) 
-        return jsonify({"status": "complete", "data": result})
-    elif status == 'error':
-        error_message = task.get('error', 'An unknown error occurred.')
-        tasks.pop(task_id, None)
-        return jsonify({"status": "error", "message": error_message}), 500
-    else:
-        return jsonify({"status": status})
+    except Exception as e:
+        print(f"An error occurred during diagnosis: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "An internal server error occurred."}), 500
 
 @app.route('/generate_style', methods=['POST'])
 def generate_style():
-    # Dummy implementation
+    # Dummy implementation for virtual try-on
     return jsonify({"message": "Style generation is not fully implemented."})
 
 
