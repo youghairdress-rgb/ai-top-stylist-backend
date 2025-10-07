@@ -1,7 +1,7 @@
 import os
 import cv2
 import numpy as np
-import requests # Use requests for direct API call
+import google.generativeai as genai # Re-introducing the official Google SDK
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import io
@@ -14,8 +14,11 @@ from concurrent.futures import ThreadPoolExecutor
 # Set the Google API key from environment variables
 try:
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+    # Configure the SDK with the API key
+    if GOOGLE_API_KEY:
+        genai.configure(api_key=GOOGLE_API_KEY)
 except Exception as e:
-    print(f"Error reading Google API key: {e}")
+    print(f"Error reading or configuring Google API key: {e}")
     GOOGLE_API_KEY = None
 
 # Initialize Flask App and CORS
@@ -47,8 +50,8 @@ def run_full_diagnosis(task_id, image_bytes):
         
         tasks[task_id]['status'] = 'calling_llm'
         
-        # Call LLM for proposals
-        proposals_json_str = call_llm_for_proposals_rest(full_diagnosis)
+        # Call LLM for proposals using the SDK
+        proposals_json_str = call_llm_with_sdk(full_diagnosis)
         proposals_data = json.loads(proposals_json_str)
 
         final_result = {"diagnosis": full_diagnosis, "proposals": proposals_data}
@@ -75,12 +78,16 @@ def analyze_personal_color(image_bytes):
         "personal_color_diagnosis": {"明度": "高", "ベースカラー": "イエローベース", "シーズン": "スプリング", "彩度": "中", "瞳の色": "ライトブラウン"}
     }
 
-def call_llm_for_proposals_rest(diagnosis_data):
-    print("Calling LLM via REST API...")
+def call_llm_with_sdk(diagnosis_data):
+    """
+    Generates proposals by calling the Gemini API using the official Python SDK.
+    """
+    print("Calling LLM via official SDK...")
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={GOOGLE_API_KEY}"
+    # Initialize the model using the SDK
+    model = genai.GenerativeModel('gemini-pro')
     
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -95,22 +102,14 @@ def call_llm_for_proposals_rest(diagnosis_data):
     }}
     """
     
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-    headers = {"Content-Type": "application/json"}
-
     try:
-        response = requests.post(api_url, headers=headers, json=payload, timeout=100)
-        response.raise_for_status()
-        response_json = response.json()
-        text_content = response_json['candidates'][0]['content']['parts'][0]['text']
-        json_text = text_content.strip().replace("```json", "").replace("```", "")
-        print("LLM REST API response received successfully.")
+        response = model.generate_content(prompt)
+        # Extracting the JSON part from the response text
+        json_text = response.text.strip().replace("```json", "").replace("```", "")
+        print("LLM SDK response received successfully.")
         return json_text
-    except requests.exceptions.RequestException as e:
-        print(f"CRITICAL ERROR during LLM REST API call: {e}")
-        if e.response:
-            print(f"Response Status Code: {e.response.status_code}")
-            print(f"Response Body: {e.response.text}")
+    except Exception as e:
+        print(f"CRITICAL ERROR during LLM SDK call: {e}")
         traceback.print_exc()
         raise
 
