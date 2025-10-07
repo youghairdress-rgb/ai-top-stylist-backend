@@ -86,8 +86,9 @@ def call_llm_with_sdk(diagnosis_data):
     if not GOOGLE_API_KEY:
         raise ValueError("Google API key is not configured.")
 
-    # Initialize the model using the SDK
-    model = genai.GenerativeModel('gemini-pro')
+    # Initialize the model using the SDK, upgraded to gemini-1.5-pro
+    # SDK will handle using the correct API version (v1) for this model.
+    model = genai.GenerativeModel('gemini-1.5-pro')
     
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
