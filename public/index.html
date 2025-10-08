@@ -22,6 +22,7 @@
             color: var(--text-color);
         }
         .main-container {
+            width: 100%;
             max-width: 420px;
             margin: 0 auto;
             min-height: 100vh;
@@ -38,6 +39,8 @@
             border-radius: 2rem;
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             margin: 1rem;
+            /* Added min-height to prevent shrinking */
+            min-height: calc(100vh - 2rem);
         }
 
         .btn-primary {
@@ -194,14 +197,14 @@
         <div id="screen-loading" class="hidden screen-content text-center items-center">
             <div class="spinner mb-8"></div>
             <h2 class="text-xl font-semibold">AIが診断中です</h2>
-            <p class="text-gray-500">診断リクエストを送信中...</p>
+            <p class="text-gray-500">結果を取得しています...</p>
         </div>
         
         <div id="screen-results" class="hidden p-4 md:p-6 space-y-6 overflow-y-auto">
             <h2 class="text-2xl font-bold text-center pt-8">AI診断結果</h2>
             <div id="diagnosis-output"></div>
             <div id="proposals-output"></div>
-            <div class="p-4 sticky bottom-4">
+            <div class="p-4 sticky bottom-4 bg-white/80 backdrop-blur-sm">
                  <button onclick="showScreen('screen-start')" class="btn-primary w-full">トップに戻る</button>
             </div>
         </div>
@@ -232,9 +235,6 @@
 
             const formData = new FormData();
             formData.append('front_image', frontImageFile);
-            // 本来はサイドやバックの画像も追加
-            // const sideImageFile = document.getElementById('side_image').files[0];
-            // if (sideImageFile) formData.append('side_image', sideImageFile);
 
             try {
                 const response = await fetch(`${API_BASE_URL}/diagnose`, {
@@ -248,6 +248,7 @@
                 }
                 
                 const result = await response.json();
+                console.log("Received data from backend:", result); // Log the received data
                 displayResults(result);
 
             } catch (error) {
@@ -266,7 +267,7 @@
             proposalsOutput.innerHTML = '';
 
             // 診断結果の表示
-            if(result.diagnosis) {
+            if(result && result.diagnosis) {
                 let diagnosisHtml = '<div class="space-y-6">';
                 for (const [category, details] of Object.entries(result.diagnosis)) {
                      const categoryName = {
@@ -285,10 +286,12 @@
                 }
                 diagnosisHtml += '</div>';
                 diagnosisOutput.innerHTML = diagnosisHtml;
+            } else {
+                console.log("No diagnosis data found in the result.");
             }
 
             // 提案の表示
-            if(result.proposals) {
+            if(result && result.proposals) {
                  let proposalsHtml = '<div class="space-y-8 mt-8">';
 
                 // ヘアスタイル提案
@@ -311,6 +314,8 @@
 
                 proposalsHtml += '</div>';
                 proposalsOutput.innerHTML = proposalsHtml;
+            } else {
+                 console.log("No proposals data found in the result.");
             }
             
             showScreen('screen-results');
