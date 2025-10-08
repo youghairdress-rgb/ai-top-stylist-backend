@@ -1,7 +1,10 @@
+Flask and Server
 flask
-flask-cors
-opencv-python-headless
-mediapipe==0.10.14
 gunicorn
+
+Image Processing
+opencv-python-headless
 numpy
+
+Google AI
 google-generativeai==0.5.4

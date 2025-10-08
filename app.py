@@ -10,46 +10,50 @@ import json
 
 # --- Configuration ---
 # Set the Google API key from environment variables
-try
+try:
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
     if GOOGLE_API_KEY:
         genai.configure(api_key=GOOGLE_API_KEY)
+        print("Google API Key configured successfully.")
+    else:
+        print("WARNING: GOOGLE_API_KEY environment variable not found.")
 except Exception as e:
-    print(f"Error configuring Google API: {e}")
+    print(f"CRITICAL ERROR during Google API configuration: {e}")
 
 # Initialize Flask App and CORS
 app = Flask(__name__)
-CORS(app)
+CORS(app) # Allow cross-origin requests from any domain
 
 # --- Health Check Endpoint ---
 @app.route('/', methods=['GET'])
 def health_check():
     """A simple endpoint to confirm the server is running."""
-    return "Hello, Stylist AI is running!", 200
+    print("Health check endpoint was hit.")
+    return "Hello, Stylist AI Server is running!", 200
 
 # --- AI and Image Processing Functions ---
 
-def analyze_face_and_skeleton(image_bytes):
-    print("-> Analyzing face and skeleton...")
-    # This is a dummy function. Replace with actual Mediapipe logic.
+def analyze_assets_dummy(image_bytes):
+    """
+    This is a placeholder for actual analysis functions.
+    In a real application, you would use Mediapipe here.
+    """
+    print("-> (Dummy) Analyzing face, skeleton, and personal color...")
     return {
         "face_diagnosis": {"鼻": "丸みのある鼻", "口": "ふっくらした唇", "目": "丸い", "眉": "平行眉", "おでこ": "広め"},
-        "skeleton_diagnosis": {"首の長さ": "普通", "顔の形": "丸顔", "ボディライン": "ストレート", "肩のライン": "なだらか"}
-    }
-
-def analyze_personal_color(image_bytes):
-    print("-> Analyzing personal color...")
-    # This is a dummy function. Replace with actual color analysis logic.
-    return {
+        "skeleton_diagnosis": {"首の長さ": "普通", "顔の形": "丸顔", "ボディライン": "ストレート", "肩のライン": "なだらか"},
         "personal_color_diagnosis": {"明度": "高", "ベースカラー": "イエローベース", "シーズン": "スプリング", "彩度": "中", "瞳の色": "ライトブラウン"}
     }
 
 def call_llm_with_sdk(diagnosis_data):
-    print("Calling LLM via official SDK with 'gemini-1.5-pro'...")
-    if not GOOGLE_API_KEY:
-        raise ValueError("Google API key is not configured.")
-
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    """
+    Calls the Google Gemini model using the official Python SDK.
+    This is the standard and recommended approach.
+    """
+    print("-> Calling LLM with official SDK...")
+    
+    # Using the latest stable model version
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -68,7 +72,7 @@ def call_llm_with_sdk(diagnosis_data):
         response = model.generate_content(prompt)
         # Clean up the response to ensure it's valid JSON
         json_text = response.text.strip().replace("```json", "").replace("```", "")
-        print("LLM SDK response received successfully.")
+        print("-> LLM SDK response received successfully.")
         return json_text
     except Exception as e:
         print(f"CRITICAL ERROR during LLM SDK call: {e}")
@@ -78,8 +82,9 @@ def call_llm_with_sdk(diagnosis_data):
 # --- API Endpoints ---
 @app.route('/diagnose', methods=['POST'])
 def diagnose():
-    print("\n--- Received request for /diagnose (Direct Response Mode) ---")
+    print("\n--- Received request for /diagnose ---")
     if 'front_image' not in request.files:
+        print("ERROR: No 'front_image' provided in the request.")
         return jsonify({"error": "No front image provided"}), 400
 
     try:
@@ -95,35 +100,28 @@ def diagnose():
             scale = max_width / image.shape[1]
             new_height = int(image.shape[0] * scale)
             image = cv2.resize(image, (max_width, new_height), interpolation=cv2.INTER_AREA)
-            print("Image resized successfully.")
 
         _, image_bytes_for_analysis = cv2.imencode('.jpg', image)
         
-        face_skeleton_results = analyze_face_and_skeleton(image_bytes_for_analysis.tobytes())
-        personal_color_results = analyze_personal_color(image_bytes_for_analysis.tobytes())
-        full_diagnosis = {**face_skeleton_results, **personal_color_results}
+        # In a real app, you would run multiple analyses. Here we use one dummy function.
+        full_diagnosis = analyze_assets_dummy(image_bytes_for_analysis.tobytes())
 
         proposals_json_str = call_llm_with_sdk(full_diagnosis)
         proposals_data = json.loads(proposals_json_str)
 
         final_result = {"diagnosis": full_diagnosis, "proposals": proposals_data}
         
-        print("Diagnosis process completed successfully. Sending direct response.")
+        print("--- Diagnosis process completed successfully. Sending response. ---")
         return jsonify(final_result)
 
     except Exception as e:
-        print(f"An error occurred during diagnosis: {e}")
+        print(f"An unexpected error occurred during /diagnose: {e}")
         traceback.print_exc()
-        # Provide a more specific error message to the frontend
-        error_message = f"AI処理中にエラーが発生しました: {str(e)}"
+        error_message = f"AI処理中にサーバーエラーが発生しました: {str(e)}"
         return jsonify({"error": error_message}), 500
 
-@app.route('/generate_style', methods=['POST'])
-def generate_style():
-    # Dummy implementation for now
-    return jsonify({"message": "Style generation is not fully implemented."})
-
-
+# --- Main Execution ---
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    # This block is for local development, not for production on Render
+    app.run(host='0.0.0.0', port=5001, debug=True)
 
