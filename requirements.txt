@@ -1,5 +1,6 @@
 flask
 gunicorn
+flask-cors
 opencv-python-headless
 numpy
 google-generativeai==0.5.4
