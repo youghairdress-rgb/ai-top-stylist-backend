@@ -1,10 +1,5 @@
-Flask and Server
 flask
 gunicorn
-
-Image Processing
 opencv-python-headless
 numpy
-
-Google AI
 google-generativeai==0.5.4
