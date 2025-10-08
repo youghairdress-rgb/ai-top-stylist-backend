@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AIトップスタイリスト診断</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
     <style>
         :root {
             --primary-color: #0ABAB5; /* ティファニーブルー系 */
@@ -111,24 +111,6 @@
                     <input type="file" id="front_image" accept="image/*" class="hidden">
                     <button onclick="document.getElementById('front_image').click()" class="btn-secondary text-sm">撮影する</button>
                 </div>
-                <!-- 側面写真 -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                        <p class="font-semibold">写真：サイド (任意)</p>
-                        <p class="text-sm text-gray-500">横顔と髪の長さがわかるように</p>
-                    </div>
-                    <input type="file" id="side_image" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('side_image').click()" class="btn-secondary text-sm">撮影する</button>
-                </div>
-                 <!-- 背面写真 -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                        <p class="font-semibold">写真：バック (任意)</p>
-                        <p class="text-sm text-gray-500">後ろ全体の髪型がわかるように</p>
-                    </div>
-                    <input type="file" id="back_image" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('back_image').click()" class="btn-secondary text-sm">撮影する</button>
-                </div>
             </div>
             <button onclick="startDiagnosis()" class="btn-primary w-full mt-10">AI診断をリクエストする</button>
         </div>
@@ -137,6 +119,7 @@
             <div class="spinner mb-6"></div>
             <h2 class="text-xl font-semibold">AIが診断中です</h2>
             <p class="text-gray-500">診断リクエストを送信中...</p>
+            <p id="polling-status" class="text-sm text-gray-400 mt-2"></p>
         </div>
         
         <div id="screen-results" class="hidden p-6 space-y-6">
@@ -150,7 +133,8 @@
 
     <script>
         // バックエンドサーバーのURL
-        const API_BASE_URL = 'https://ai-top-stylist-backend.onrender.com';
+        const API_BASE_URL = '[https://ai-top-stylist-backend.onrender.com](https://ai-top-stylist-backend.onrender.com)';
+        let pollingInterval;
 
         // 画面切り替え関数
         function showScreen(screenId) {
@@ -170,31 +154,70 @@
             }
 
             showScreen('screen-loading');
+            document.getElementById('polling-status').textContent = '診断タスクを開始しています...';
+
 
             const formData = new FormData();
             formData.append('front_image', frontImageFile);
-            // 将来的には他の画像も追加
-            // formData.append('side_image', document.getElementById('side_image').files[0]);
-            // formData.append('back_image', document.getElementById('back_image').files[0]);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/diagnose`, {
+                // 1. Start the diagnosis task and get a task_id
+                const startResponse = await fetch(`${API_BASE_URL}/diagnose`, {
                     method: 'POST',
                     body: formData,
                 });
 
-                if (!response.ok) {
-                    throw new Error(`サーバーエラー: ${response.status}`);
+                if (!startResponse.ok || startResponse.status !== 202) {
+                    throw new Error(`診断の開始に失敗しました: ${startResponse.status}`);
                 }
                 
-                const result = await response.json();
-                displayResults(result);
+                const { task_id } = await startResponse.json();
+                console.log(`診断タスクを開始しました。Task ID: ${task_id}`);
+                document.getElementById('polling-status').textContent = 'AIが分析中です...';
+
+
+                // 2. Poll for the result
+                pollForResult(task_id);
 
             } catch (error) {
                 console.error('診断中にエラーが発生しました:', error);
                 alert('診断中にエラーが発生しました。サーバーが混み合っている可能性があります。');
                 showScreen('screen-upload'); // エラー時はアップロード画面に戻る
             }
+        }
+
+        function pollForResult(taskId) {
+            if (pollingInterval) clearInterval(pollingInterval); // Clear any existing intervals
+
+            pollingInterval = setInterval(async () => {
+                try {
+                    const resultResponse = await fetch(`${API_BASE_URL}/get_result?task_id=${taskId}`);
+                    
+                    if (!resultResponse.ok) {
+                        // Stop polling on server error
+                        throw new Error(`結果の取得に失敗しました: ${resultResponse.status}`);
+                    }
+
+                    const result = await resultResponse.json();
+                    document.getElementById('polling-status').textContent = `現在のステータス: ${result.status}`;
+
+
+                    if (result.status === 'complete') {
+                        clearInterval(pollingInterval);
+                        console.log("診断が完了しました:", result.data);
+                        displayResults(result.data);
+                    } else if (result.status === 'error') {
+                        clearInterval(pollingInterval);
+                        throw new Error(`AIの処理中にエラーが発生しました: ${result.message}`);
+                    }
+                    // If 'pending' or 'analyzing_assets', etc., continue polling
+                } catch (error) {
+                    clearInterval(pollingInterval);
+                    console.error('Polling error:', error);
+                    alert(error.message || '結果の取得に失敗しました。');
+                    showScreen('screen-upload');
+                }
+            }, 5000); // Poll every 5 seconds
         }
         
         // 結果表示処理
