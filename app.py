@@ -69,7 +69,8 @@ def call_llm_with_sdk(diagnosis_data):
     """
     
     try:
-        response = model.generate_content(prompt)
+        # Added a timeout to the request for safety
+        response = model.generate_content(prompt, request_options={"timeout": 100})
         # Clean up the response to ensure it's valid JSON
         json_text = response.text.strip().replace("```json", "").replace("```", "")
         print("-> LLM SDK response received successfully.")
@@ -103,7 +104,6 @@ def diagnose():
 
         _, image_bytes_for_analysis = cv2.imencode('.jpg', image)
         
-        # In a real app, you would run multiple analyses. Here we use one dummy function.
         full_diagnosis = analyze_assets_dummy(image_bytes_for_analysis.tobytes())
 
         proposals_json_str = call_llm_with_sdk(full_diagnosis)
@@ -122,6 +122,7 @@ def diagnose():
 
 # --- Main Execution ---
 if __name__ == '__main__':
-    # This block is for local development, not for production on Render
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # This block is for running the app. Render uses the PORT env var.
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
 
