@@ -39,10 +39,8 @@
             border-radius: 2rem;
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
             margin: 1rem;
-            /* Added min-height to prevent shrinking */
             min-height: calc(100vh - 2rem);
         }
-
         .btn-primary {
             background-color: var(--primary-color);
             color: var(--button-text-color);
@@ -64,7 +62,7 @@
             padding: 1rem 1.5rem;
             font-weight: 600;
             width: 100%;
-             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
         }
         .btn-dark:hover {
              background-color: var(--dark-button-hover-color);
@@ -78,8 +76,7 @@
             padding: 0.5rem 1rem;
             font-weight: 500;
         }
-       
-        /* スピナーアニメーション */
+        /* Spinner Animation */
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             width: 56px;
@@ -97,7 +94,7 @@
 <body class="flex items-center justify-center">
 
     <div class="main-container">
-        <!-- 各画面をここに定義 -->
+        <!-- Screen: Start -->
         <div id="screen-start" class="screen-content text-center items-center">
             <div class="w-36 h-36 bg-teal-100 rounded-full flex items-center justify-center mb-8">
                 <span class="text-3xl font-bold text-teal-600">LOGO</span>
@@ -107,21 +104,22 @@
             <button onclick="showScreen('screen-profile')" class="btn-primary">診断を始める</button>
         </div>
 
+        <!-- Screen: Profile -->
         <div id="screen-profile" class="hidden screen-content">
             <h2 class="text-2xl font-bold text-center mb-8">プロフィール入力</h2>
             <div class="space-y-6">
                  <div>
                     <label for="line-id" class="block text-sm font-medium text-gray-700 mb-1">LINEユーザーID</label>
-                    <input type="text" id="line-id" readonly class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-500">
+                    <input type="text" id="line-id" readonly class="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-500" value="(LIFFから自動取得)">
                 </div>
                 <div>
                     <label for="name" class="block text-sm font-medium text-gray-700 mb-1">お名前</label>
-                    <input type="text" id="name" class="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
+                    <input type="text" id="name" class="w-full px-4 py-2 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500" placeholder="例：山田 花子">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">性別</label>
                     <div class="flex justify-around p-1 bg-gray-100 rounded-full">
-                        <label class="w-full text-center"><input type="radio" name="gender" value="female" class="sr-only peer"><span class="block w-full py-2 px-4 rounded-full cursor-pointer peer-checked:bg-white peer-checked:shadow">女性</span></label>
+                        <label class="w-full text-center"><input type="radio" name="gender" value="female" class="sr-only peer" checked><span class="block w-full py-2 px-4 rounded-full cursor-pointer peer-checked:bg-white peer-checked:shadow">女性</span></label>
                         <label class="w-full text-center"><input type="radio" name="gender" value="male" class="sr-only peer"><span class="block w-full py-2 px-4 rounded-full cursor-pointer peer-checked:bg-white peer-checked:shadow">男性</span></label>
                         <label class="w-full text-center"><input type="radio" name="gender" value="other" class="sr-only peer"><span class="block w-full py-2 px-4 rounded-full cursor-pointer peer-checked:bg-white peer-checked:shadow">その他</span></label>
                     </div>
@@ -129,12 +127,12 @@
                 <button onclick="showScreen('screen-upload')" class="btn-dark w-full !mt-12">撮影に進む</button>
             </div>
         </div>
-
+        
+        <!-- Screen: Upload -->
         <div id="screen-upload" class="hidden screen-content">
-            <h2 class="text-2xl font-bold text-center mb-2">写真・動画撮影</h2>
-            <p class="text-center text-gray-500 mb-8">AI診断のため、指定されたアングルから撮影してください。</p>
+            <h2 class="text-2xl font-bold text-center mb-2">写真撮影</h2>
+            <p class="text-center text-gray-500 mb-8">AI診断のため、正面から顔がはっきり写る写真を1枚撮影してください。</p>
             <div class="space-y-4">
-                 <!-- 各アップロード項目 -->
                 <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                     <div class="flex items-center space-x-4">
                          <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -144,62 +142,21 @@
                         </div>
                     </div>
                     <input type="file" id="front_image" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('front_image').click()" class="btn-outline">撮影する</button>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div class="flex items-center space-x-4">
-                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        <div>
-                            <p class="font-semibold">写真：サイド</p>
-                            <p class="text-sm text-gray-500">横顔と髪の長さがわかるように</p>
-                        </div>
-                    </div>
-                    <input type="file" id="side_image" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('side_image').click()" class="btn-outline">撮影する</button>
-                </div>
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div class="flex items-center space-x-4">
-                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                        <div>
-                            <p class="font-semibold">写真：バック</p>
-                            <p class="text-sm text-gray-500">後ろ全体の髪型がわかるように</p>
-                        </div>
-                    </div>
-                    <input type="file" id="back_image" accept="image/*" class="hidden">
-                    <button onclick="document.getElementById('back_image').click()" class="btn-outline">撮影する</button>
-                </div>
-                 <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div class="flex items-center space-x-4">
-                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        <div>
-                            <p class="font-semibold">動画：正面 (3秒)</p>
-                            <p class="text-sm text-gray-500">ゆっくりと左右に顔を動かす</p>
-                        </div>
-                    </div>
-                    <input type="file" id="front_video" accept="video/*" class="hidden">
-                    <button onclick="document.getElementById('front_video').click()" class="btn-outline">撮影する</button>
-                </div>
-                 <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                    <div class="flex items-center space-x-4">
-                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        <div>
-                            <p class="font-semibold">動画：バック (3秒)</p>
-                            <p class="text-sm text-gray-500">髪全体の動きがわかるように</p>
-                        </div>
-                    </div>
-                    <input type="file" id="back_video" accept="video/*" class="hidden">
-                    <button onclick="document.getElementById('back_video').click()" class="btn-outline">撮影する</button>
+                    <button id="upload-button" onclick="document.getElementById('front_image').click()" class="btn-outline">撮影する</button>
                 </div>
             </div>
             <button onclick="startDiagnosis()" class="btn-dark w-full !mt-12">AI診断をリクエストする</button>
+             <button onclick="showScreen('screen-profile')" class="w-full text-center text-gray-500 mt-4 text-sm">戻る</button>
         </div>
 
+        <!-- Screen: Loading -->
         <div id="screen-loading" class="hidden screen-content text-center items-center">
             <div class="spinner mb-8"></div>
             <h2 class="text-xl font-semibold">AIが診断中です</h2>
-            <p class="text-gray-500">結果を取得しています...</p>
+            <p class="text-gray-500">結果を取得しています... (最大2分程度)</p>
         </div>
         
+        <!-- Screen: Results -->
         <div id="screen-results" class="hidden p-4 md:p-6 space-y-6 overflow-y-auto">
             <h2 class="text-2xl font-bold text-center pt-8">AI診断結果</h2>
             <div id="diagnosis-output"></div>
@@ -211,10 +168,8 @@
     </div>
 
     <script>
-        // バックエンドサーバーのURL
         const API_BASE_URL = 'https://ai-top-stylist-backend.onrender.com';
 
-        // 画面切り替え関数
         function showScreen(screenId) {
             document.querySelectorAll('.main-container > div').forEach(div => {
                 div.classList.add('hidden');
@@ -222,17 +177,22 @@
             document.getElementById(screenId).classList.remove('hidden');
         }
 
-        // 診断開始処理
+        document.getElementById('front_image').addEventListener('change', function(event) {
+            const uploadButton = document.getElementById('upload-button');
+            if (event.target.files.length > 0) {
+                uploadButton.textContent = '変更する';
+                uploadButton.classList.remove('btn-outline');
+                uploadButton.classList.add('bg-gray-200');
+            }
+        });
+
         async function startDiagnosis() {
             const frontImageFile = document.getElementById('front_image').files[0];
-            
             if (!frontImageFile) {
                 alert('正面の写真をアップロードしてください。');
                 return;
             }
-
             showScreen('screen-loading');
-
             const formData = new FormData();
             formData.append('front_image', frontImageFile);
 
@@ -244,29 +204,26 @@
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({ error: 'サーバーから不明なエラーが返されました。' }));
-                    throw new Error(`サーバーエラー: ${response.status} - ${errorData.error}`);
+                    throw new Error(`サーバーエラー: ${response.status} - ${errorData.error || '詳細不明'}`);
                 }
                 
                 const result = await response.json();
-                console.log("Received data from backend:", result); // Log the received data
+                console.log("Received data from backend:", result);
                 displayResults(result);
 
             } catch (error) {
-                console.error('診断中にエラーが発生しました:', error);
+                console.error('診断リクエスト中に重大なエラーが発生しました:', error);
                 alert('診断中にエラーが発生しました。サーバーが混み合っている可能性があります。\n' + error.message);
                 showScreen('screen-upload'); 
             }
         }
         
-        // 結果表示処理
         function displayResults(result) {
             const diagnosisOutput = document.getElementById('diagnosis-output');
             const proposalsOutput = document.getElementById('proposals-output');
-            
             diagnosisOutput.innerHTML = '';
             proposalsOutput.innerHTML = '';
 
-            // 診断結果の表示
             if(result && result.diagnosis) {
                 let diagnosisHtml = '<div class="space-y-6">';
                 for (const [category, details] of Object.entries(result.diagnosis)) {
@@ -286,42 +243,28 @@
                 }
                 diagnosisHtml += '</div>';
                 diagnosisOutput.innerHTML = diagnosisHtml;
-            } else {
-                console.log("No diagnosis data found in the result.");
             }
 
-            // 提案の表示
             if(result && result.proposals) {
                  let proposalsHtml = '<div class="space-y-8 mt-8">';
-
-                // ヘアスタイル提案
                 proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">ヘアスタイル提案</h3><div class="grid grid-cols-2 gap-4">';
                 result.proposals.hairstyles.forEach(style => {
                     proposalsHtml += `<div class="p-4 rounded-xl bg-orange-50 border border-orange-200"><p class="font-bold text-orange-800">${style.name}</p><p class="text-sm text-gray-600 mt-1">${style.description}</p></div>`;
                 });
                 proposalsHtml += '</div></div>';
-
-                // ヘアカラー提案
                 proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">ヘアカラー提案</h3><div class="grid grid-cols-2 gap-4">';
                 result.proposals.hair_colors.forEach(color => {
                     proposalsHtml += `<div class="p-4 rounded-xl bg-teal-50 border border-teal-200"><p class="font-bold text-teal-800">${color.name}</p><p class="text-sm text-gray-600 mt-1">${color.description}</p></div>`;
                 });
                 proposalsHtml += '</div></div>';
-                
-                // トップスタイリストからの総評
                 proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">トップスタイリストAIより</h3>';
                 proposalsHtml += `<div class="p-6 rounded-2xl bg-gray-50 border border-gray-200"><p class="text-sm text-gray-700 leading-relaxed">${result.proposals.top_stylist_comment}</p></div></div>`;
-
                 proposalsHtml += '</div>';
                 proposalsOutput.innerHTML = proposalsHtml;
-            } else {
-                 console.log("No proposals data found in the result.");
             }
             
             showScreen('screen-results');
         }
-
-        // 初期画面を表示
         showScreen('screen-start');
     </script>
 </body>
