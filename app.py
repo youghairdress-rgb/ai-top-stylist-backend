@@ -10,15 +10,19 @@ import json
 
 # --- Configuration ---
 # Set the Google API key from environment variables
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+if not GOOGLE_API_KEY:
+    # 環境変数が設定されていない場合、起動時にエラーを発生させ、アプリケーションを終了
+    print("CRITICAL ERROR: GOOGLE_API_KEY environment variable not found. Please set it to proceed.")
+    import sys
+    sys.exit(1) # アプリケーションを終了させる
 try:
-    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
-    if GOOGLE_API_KEY:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        print("Google API Key configured successfully.")
-    else:
-        print("WARNING: GOOGLE_API_KEY environment variable not found.")
+    genai.configure(api_key=GOOGLE_API_KEY)
+    print("Google API Key configured successfully.")
 except Exception as e:
     print(f"CRITICAL ERROR during Google API configuration: {e}")
+    import sys
+    sys.exit(1) # アプリケーションを終了させる
 
 # Initialize Flask App and CORS
 app = Flask(__name__)
@@ -36,7 +40,9 @@ def health_check():
 def analyze_assets_dummy(image_bytes):
     """
     This is a placeholder for actual analysis functions.
-    In a real application, you would use Mediapipe here.
+    In a real application, you would use Mediapipe here to
+    perform face, skeleton, and personal color analysis from the image.
+    Currently, it returns dummy data.
     """
     print("-> (Dummy) Analyzing face, skeleton, and personal color...")
     return {
@@ -53,7 +59,8 @@ def call_llm_with_sdk(diagnosis_data):
     print("-> Calling LLM with official SDK...")
     
     # Using the latest stable model version
-    model = genai.GenerativeModel('gemini-1.5-pro-latest')
+    # モデル名を 'gemini-1.5-pro-latest' から 'gemini-1.5-pro' に変更
+    model = genai.GenerativeModel('gemini-1.5-pro')
     
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -125,4 +132,3 @@ if __name__ == '__main__':
     # This block is for running the app. Render uses the PORT env var.
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
-
