@@ -8,41 +8,35 @@ import io
 import traceback
 import json
 
-# --- Configuration ---
-# Set the Google API key from environment variables
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
-if not GOOGLE_API_KEY:
-    # 環境変数が設定されていない場合、起動時にエラーを発生させ、アプリケーションを終了
-    print("CRITICAL ERROR: GOOGLE_API_KEY environment variable not found. Please set it to proceed.")
-    import sys
-    sys.exit(1) # アプリケーションを終了させる
+# --- 設定 ---
+# 環境変数からGoogle APIキーを設定
 try:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    print("Google API Key configured successfully.")
+    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+    if GOOGLE_API_KEY:
+        genai.configure(api_key=GOOGLE_API_KEY)
+        print("Google API Key configured successfully.")
+    else:
+        print("WARNING: GOOGLE_API_KEY environment variable not found.")
 except Exception as e:
     print(f"CRITICAL ERROR during Google API configuration: {e}")
-    import sys
-    sys.exit(1) # アプリケーションを終了させる
 
-# Initialize Flask App and CORS
+# FlaskアプリとCORSの初期化
 app = Flask(__name__)
-CORS(app) # Allow cross-origin requests from any domain
+CORS(app) # すべてのドメインからのクロスオリジンリクエストを許可
 
-# --- Health Check Endpoint ---
+# --- ヘルスチェック用エンドポイント ---
 @app.route('/', methods=['GET'])
 def health_check():
-    """A simple endpoint to confirm the server is running."""
+    """サーバーが起動しているかを確認するためのシンプルなエンドポイント"""
     print("Health check endpoint was hit.")
     return "Hello, Stylist AI Server is running!", 200
 
-# --- AI and Image Processing Functions ---
+# --- AI・画像処理関数 ---
 
 def analyze_assets_dummy(image_bytes):
     """
-    This is a placeholder for actual analysis functions.
-    In a real application, you would use Mediapipe here to
-    perform face, skeleton, and personal color analysis from the image.
-    Currently, it returns dummy data.
+    実際の分析関数のプレースホルダー。
+    本番アプリケーションでは、ここでMediapipeを使用します。
     """
     print("-> (Dummy) Analyzing face, skeleton, and personal color...")
     return {
@@ -53,14 +47,13 @@ def analyze_assets_dummy(image_bytes):
 
 def call_llm_with_sdk(diagnosis_data):
     """
-    Calls the Google Gemini model using the official Python SDK.
-    This is the standard and recommended approach.
+    公式Python SDKを使用してGoogle Geminiモデルを呼び出します。
+    これが標準的で推奨されるアプローチです。
     """
     print("-> Calling LLM with official SDK...")
     
-    # Using the latest stable model version
-    # モデル名を 'gemini-1.5-pro-latest' から 'gemini-1.5-pro' に変更
-    model = genai.GenerativeModel('gemini-1.5-pro')
+    # 最新の安定版モデルを使用
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
     
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つ顧客に、最適なスタイルを提案してください。
@@ -76,9 +69,9 @@ def call_llm_with_sdk(diagnosis_data):
     """
     
     try:
-        # Added a timeout to the request for safety
+        # リクエストにタイムアウトを設定
         response = model.generate_content(prompt, request_options={"timeout": 100})
-        # Clean up the response to ensure it's valid JSON
+        # レスポンスを整形して有効なJSONにする
         json_text = response.text.strip().replace("```json", "").replace("```", "")
         print("-> LLM SDK response received successfully.")
         return json_text
@@ -87,7 +80,7 @@ def call_llm_with_sdk(diagnosis_data):
         traceback.print_exc()
         raise
 
-# --- API Endpoints ---
+# --- APIエンドポイント ---
 @app.route('/diagnose', methods=['POST'])
 def diagnose():
     print("\n--- Received request for /diagnose ---")
@@ -127,8 +120,9 @@ def diagnose():
         error_message = f"AI処理中にサーバーエラーが発生しました: {str(e)}"
         return jsonify({"error": error_message}), 500
 
-# --- Main Execution ---
+# --- メイン実行ブロック ---
 if __name__ == '__main__':
-    # This block is for running the app. Render uses the PORT env var.
+    # RenderはPORT環境変数を使用します
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
+
