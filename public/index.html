@@ -145,7 +145,7 @@
                     <button id="upload-button" onclick="document.getElementById('front_image').click()" class="btn-outline">撮影する</button>
                 </div>
             </div>
-            <button onclick="startDiagnosis()" class="btn-dark w-full !mt-12">AI診断をリクエストする</button>
+            <button id="start-diagnosis-btn" onclick="startDiagnosis()" class="btn-dark w-full !mt-12">AI診断をリクエストする</button>
              <button onclick="showScreen('screen-profile')" class="w-full text-center text-gray-500 mt-4 text-sm">戻る</button>
         </div>
 
@@ -161,20 +161,26 @@
             <h2 class="text-2xl font-bold text-center pt-8">AI診断結果</h2>
             <div id="diagnosis-output"></div>
             <div id="proposals-output"></div>
-            <div class="p-4 sticky bottom-4 bg-white/80 backdrop-blur-sm">
+            <div class="p-4 sticky bottom-4 bg-white/80 backdrop-blur-sm rounded-2xl">
                  <button onclick="showScreen('screen-start')" class="btn-primary w-full">トップに戻る</button>
             </div>
         </div>
     </div>
 
     <script>
+        // バックエンドAPIのURLを設定します。
+        // ローカルでのテスト用: 'http://127.0.0.1:8080'
+        // Render.comデプロイ後: 'https://your-app-name.onrender.com'
         const API_BASE_URL = 'https://ai-top-stylist-backend.onrender.com';
 
         function showScreen(screenId) {
             document.querySelectorAll('.main-container > div').forEach(div => {
                 div.classList.add('hidden');
             });
-            document.getElementById(screenId).classList.remove('hidden');
+            const screen = document.getElementById(screenId);
+            if (screen) {
+                screen.classList.remove('hidden');
+            }
         }
 
         document.getElementById('front_image').addEventListener('change', function(event) {
@@ -188,11 +194,18 @@
 
         async function startDiagnosis() {
             const frontImageFile = document.getElementById('front_image').files[0];
+            const startButton = document.getElementById('start-diagnosis-btn');
+            
             if (!frontImageFile) {
-                alert('正面の写真をアップロードしてください。');
+                alert('診断を開始するには、正面の写真をアップロードしてください。');
                 return;
             }
+
+            // 処理中にボタンを無効化
+            startButton.disabled = true;
+            startButton.textContent = '診断中...';
             showScreen('screen-loading');
+
             const formData = new FormData();
             formData.append('front_image', frontImageFile);
 
@@ -203,8 +216,9 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ error: 'サーバーから不明なエラーが返されました。' }));
-                    throw new Error(`サーバーエラー: ${response.status} - ${errorData.error || '詳細不明'}`);
+                    // サーバーからエラーレスポンスが返された場合、JSONからエラーメッセージを抽出
+                    const errorData = await response.json().catch(() => ({ error: 'サーバーから不明な形式のエラーが返されました。' }));
+                    throw new Error(`サーバーエラー (コード: ${response.status}): ${errorData.error || '詳細不明'}`);
                 }
                 
                 const result = await response.json();
@@ -213,8 +227,13 @@
 
             } catch (error) {
                 console.error('診断リクエスト中に重大なエラーが発生しました:', error);
-                alert('診断中にエラーが発生しました。サーバーが混み合っている可能性があります。\n' + error.message);
+                // ユーザーに分かりやすいエラーメッセージを表示
+                alert('診断中にエラーが発生しました。\n\n詳細: ' + error.message + '\n\nしばらくしてからもう一度お試しください。');
                 showScreen('screen-upload'); 
+            } finally {
+                // 処理が完了したら（成功・失敗問わず）、ボタンの状態を元に戻す
+                startButton.disabled = false;
+                startButton.textContent = 'AI診断をリクエストする';
             }
         }
         
@@ -224,17 +243,18 @@
             diagnosisOutput.innerHTML = '';
             proposalsOutput.innerHTML = '';
 
+            // 診断結果の表示
             if(result && result.diagnosis) {
                 let diagnosisHtml = '<div class="space-y-6">';
                 for (const [category, details] of Object.entries(result.diagnosis)) {
-                     const categoryName = {
-                        'face_diagnosis': '顔診断',
-                        'skeleton_diagnosis': '骨格診断',
-                        'personal_color_diagnosis': 'パーソナルカラー診断'
-                    }[category] || '診断';
+                     const categoryInfo = {
+                        'face_diagnosis': { name: '顔診断', icon: '🙂' },
+                        'skeleton_diagnosis': { name: '骨格診断', icon: '🧍' },
+                        'personal_color_diagnosis': { name: 'パーソナルカラー診断', icon: '🎨' }
+                    }[category] || { name: '診断結果', icon: '✨' };
                     
                     diagnosisHtml += `<div class="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-                                        <h3 class="text-lg font-semibold text-gray-800 mb-4">${categoryName}</h3>
+                                        <h3 class="text-lg font-semibold text-gray-800 mb-4">${categoryInfo.icon} ${categoryInfo.name}</h3>
                                         <dl class="divide-y divide-gray-200">`;
                     for (const [key, value] of Object.entries(details)) {
                         diagnosisHtml += `<div class="py-3 grid grid-cols-3 gap-4"><dt class="text-sm text-gray-500">${key}</dt><dd class="text-sm text-gray-900 col-span-2 font-medium">${value}</dd></div>`;
@@ -245,28 +265,37 @@
                 diagnosisOutput.innerHTML = diagnosisHtml;
             }
 
+            // 提案結果の表示
             if(result && result.proposals) {
                  let proposalsHtml = '<div class="space-y-8 mt-8">';
-                proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">ヘアスタイル提案</h3><div class="grid grid-cols-2 gap-4">';
+                
+                // ヘアスタイル提案
+                proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">✂️ ヘアスタイル提案</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
                 result.proposals.hairstyles.forEach(style => {
                     proposalsHtml += `<div class="p-4 rounded-xl bg-orange-50 border border-orange-200"><p class="font-bold text-orange-800">${style.name}</p><p class="text-sm text-gray-600 mt-1">${style.description}</p></div>`;
                 });
                 proposalsHtml += '</div></div>';
-                proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">ヘアカラー提案</h3><div class="grid grid-cols-2 gap-4">';
+                
+                // ヘアカラー提案
+                proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">🌈 ヘアカラー提案</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4">';
                 result.proposals.hair_colors.forEach(color => {
                     proposalsHtml += `<div class="p-4 rounded-xl bg-teal-50 border border-teal-200"><p class="font-bold text-teal-800">${color.name}</p><p class="text-sm text-gray-600 mt-1">${color.description}</p></div>`;
                 });
                 proposalsHtml += '</div></div>';
-                proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">トップスタイリストAIより</h3>';
-                proposalsHtml += `<div class="p-6 rounded-2xl bg-gray-50 border border-gray-200"><p class="text-sm text-gray-700 leading-relaxed">${result.proposals.top_stylist_comment}</p></div></div>`;
+                
+                // AI総評
+                proposalsHtml += '<div><h3 class="text-xl font-bold text-gray-800 mb-4">✨ トップスタイリストAIより</h3>';
+                proposalsHtml += `<div class="p-6 rounded-2xl bg-gray-50 border border-gray-200"><p class="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">${result.proposals.top_stylist_comment}</p></div></div>`;
+                
                 proposalsHtml += '</div>';
                 proposalsOutput.innerHTML = proposalsHtml;
             }
             
             showScreen('screen-results');
         }
+        
+        // 初期画面を表示
         showScreen('screen-start');
     </script>
 </body>
 </html>
-
