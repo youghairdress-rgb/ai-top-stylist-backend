@@ -7,18 +7,29 @@ from flask_cors import CORS
 import json
 import traceback
 
+# --- バージョン確認コード ---
+# 実行環境にインストールされているライブラリのバージョンを特定し、ログに出力します。
+try:
+    import pkg_resources
+    installed_version = pkg_resources.get_distribution("google-generativeai").version
+    print(f"✅ SUCCESS: Loaded 'google-generativeai' version: [ {installed_version} ]")
+    # バージョンが古い場合、警告を出す
+    if '0.5.' in installed_version:
+        print("⚠️ WARNING: An old version of the library is loaded. This is likely the cause of the error.")
+except Exception as e:
+    print(f"❌ ERROR: Could not determine the version of 'google-generativeai'. {e}")
+# -------------------------
+
+
 # --- 設定 ---
 # 環境変数からAPIキーを安全に読み込む
-# サーバー起動時にキーがない場合はエラーを出力して終了させ、問題を早期に検知します。
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 if not GOOGLE_API_KEY:
-    raise ValueError("環境変数 'GOOGLE_API_KEY' が設定されていません。デプロイ環境で設定してください。")
+    raise ValueError("CRITICAL: GOOGLE_API_KEY environment variable is not set. Please set it in your deployment environment.")
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # FlaskアプリとCORSの初期化
 app = Flask(__name__)
-# 本番環境では、セキュリティ向上のため、実際のフロントエンドのドメインに限定することを推奨します。
-# 例: CORS(app, resources={r"/*": {"origins": "https://your-liff-app.web.app"}})
 CORS(app)
 
 # --- ヘルスチェック用エンドポイント ---
@@ -33,10 +44,9 @@ def health_check():
 def analyze_assets_dummy(image_bytes):
     """
     【ダミー関数】画像から顔・骨格・パーソナルカラーを分析します。
-    TODO: ここにMediapipeを使用した実際の分析ロジックを実装します。
+    TODO: ここにMediapipeを使用した実際の分析ロजिकを実装します。
     """
     print("-> (Dummy) Analyzing user assets...")
-    # 提供された資料に基づいたダミーデータを返却します。
     return {
         "face_diagnosis": {"鼻": "丸みのある鼻", "口": "ふっくらした唇", "目": "丸い", "眉": "平行眉", "おでこ": "広め"},
         "skeleton_diagnosis": {"首の長さ": "普通", "顔の形": "丸顔", "ボディライン": "ストレート", "肩のライン": "なだらか"},
@@ -48,10 +58,10 @@ def get_style_proposals_from_llm(diagnosis_data):
     診断結果を基に、Google Geminiモデルを呼び出してスタイル提案を生成します。
     """
     print("-> Calling Gemini API to get style proposals...")
-    
+
     # 最新の安定版モデルを使用します。
     model = genai.GenerativeModel('gemini-1.5-pro-latest')
-    
+
     prompt = f"""
     あなたは日本のトップヘアスタイリストAIです。以下の診断結果を持つお客様に、最適なスタイルを提案してください。
     提案は、ヘアスタイル2案、ヘアカラー2案、そして総合的なトップスタイリストからの総評を必ず含めてください。
@@ -76,10 +86,8 @@ def get_style_proposals_from_llm(diagnosis_data):
     """
     
     try:
-        # API呼び出しにタイムアウトを設定し、長時間待機を防ぎます。
         response = model.generate_content(prompt, request_options={"timeout": 120})
         
-        # レスポンスからJSON部分のみを安全に抽出します。
         json_text = response.text.strip().lstrip("```json").rstrip("```")
         print("-> Gemini API response received successfully.")
         return json.loads(json_text)
@@ -87,7 +95,6 @@ def get_style_proposals_from_llm(diagnosis_data):
     except Exception as e:
         print(f"CRITICAL ERROR during Gemini API call: {e}")
         traceback.print_exc()
-        # エラーが発生した場合、フロントエンドに問題を伝えるために例外を再発生させます。
         raise ValueError(f"Gemini APIとの通信に失敗しました: {e}")
 
 # --- APIエンドポイント ---
@@ -100,37 +107,24 @@ def diagnose():
 
     try:
         front_image_file = request.files['front_image']
-        
-        # 画像データをメモリ上で処理
         image_stream = front_image_file.read()
-        np_image = np.frombuffer(image_stream, np.uint8)
-        image = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
-        
-        # ダミーの分析処理を呼び出し
         full_diagnosis = analyze_assets_dummy(image_stream)
-
-        # LLMを呼び出して提案を取得
         proposals_data = get_style_proposals_from_llm(full_diagnosis)
-
-        # 最終結果を結合
         final_result = {
             "diagnosis": full_diagnosis,
             "proposals": proposals_data
         }
-        
         print("--- Diagnosis process completed successfully. Sending response. ---")
         return jsonify(final_result)
 
     except Exception as e:
-        # 予期せぬエラーが発生した場合のログ出力とエラーレスポンス
         print(f"An unexpected error occurred during /diagnose: {e}")
         traceback.print_exc()
-        # フロントエンドに分かりやすいエラーメッセージを返します。
         error_message = f"サーバー側でエラーが発生しました。しばらくしてからもう一度お試しください。(詳細: {str(e)})"
         return jsonify({"error": error_message}), 500
 
 # --- メイン実行ブロック ---
 if __name__ == '__main__':
-    # Render.comなどのホスティングサービスはPORT環境変数を参照します
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
+
